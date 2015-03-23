@@ -37,15 +37,27 @@ int initiate_connection(char* addr, char* port_number, bool server) {
   return sockfd;
 }
 
-int Receive(struct reliable_udp *r_udp, char *buffer, int len) {
+int Receive(struct session_reliable_udp *session) {
   struct sockaddr_storage client_addr;
   socklen_t addr_size = sizeof(client_addr);
-  char* ip = new char[MAX_INET]; 
+//  char* ip = new char[MAX_INET]; 
   
-  char* msg = new char[len + RELIABLE_UDP_HEADER_SIZE];
-  int recv_bytes = recvfrom(r_udp->sockfd, msg, len + RELIABLE_UDP_HEADER_SIZE, 0, (struct sockaddr *) &client_addr, &addr_size);
+  char* msg = new char[MAX_BUFFER_SIZE];
+  int recv_bytes = recvfrom(session->sockfd, msg, MAX_BUFFER_SIZE, 0, (struct sockaddr *) &client_addr, &addr_size);
 
-  
+//  int actual_data_size = recv_bytes - RELIABLE_UDP_HEADER_SIZE;
+//  extract_info(r_udp, msg);
+//  int size_file_left = r_udp->getFileSize();
+//  char* buffer = new char[size_file_left];
+//  memcpy((buffer + loc), msg + RELIABLE_UDP_HEADER_SIZE, actual_data_size); 
+//  int loc = actual_data_size;
+//  size_file -= actual_data_size;
+//  while (size_file_left != 0) {
+//    int recv_bytes = recvfrom(r_udp->sockfd, msg, len, 0, (struct sockaddr *) &client_addr, &addr_size);
+  if (recv_bytes > 0) {
+    update(session, msg, recv_bytes);
+  }
+}
 
 char* get_ip_str(struct sockaddr *sa, char *s, size_t maxlen) {
   switch(sa->sa_family) {

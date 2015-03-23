@@ -1,25 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 
-struct struct_reliable_udp {
+#define SYN_MASK 0x01
+#define ACK_MASK 0x02
+#define RST_MASK 0x04
+
+struct reliable_udp_header {
   int seq_num;
   int ack_num;
   short int window_size;
-  bool ack_significant;
-  bool reset;
-  bool fin;
+  char flags;
+  char dummy;
 };
-
-/* Creates a UDP socket */
-int create_reliable_udp_socket(int domain, int protocol) {
-  return socket(domain, SOCK_DGRAM, protocol);
-}
-
-
-
 
