@@ -1,91 +1,32 @@
 #include "connection.h"
 
-/* Creates a UDP socket */
 int create_reliable_udp_socket(int domain, int protocol) {
   return socket(domain, SOCK_DGRAM, protocol);
 }
 
-/* Create client connection */
-struct session_reliable_udp *initiate_client_connection(char *server_addr, char *server_port) {
-  struct addrinfo hints, *res;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_DGRAM;
-  if (server_addr == NULL) {
-    hints.ai_flags = AI_PASSIVE;
+bool validatePacket(struct sockaddr *addr1, struct sockaddr *addr2, socklen_t len) {
+  if (memcpy(addr1, addr2, len)) {
+    return false;
+  } else {
+    return true;
   }
-  
-  if (getaddrinfo(server_addr, server_port, &hints, &res) != 0) {
-    printf("Error getting address");
-    exit(EXIT_FAILURE);
-  } 
-  
-  int sockfd = create_reliable_udp_socket(res->ai_family, res->ai_protocol);
-  if (sockfd < 0) {
-    printf("Error trying to create socket");
-    exit(EXIT_FAILURE);
-  }
-
-  struct session_reliable_udp *session = (struct session_reliable_udp *) malloc(sizeof(struct session_reliable_udp));
-  session->client_addr = (struct sockaddr *) malloc(res->ai_addrlen);
-  memcpy(session->client_addr, res->ai_addr, res->ai_addrlen);
-  session->client_addr_size = res->ai_addrlen;
-  session->sockfd = sockfd;
-  return session;
 }
-
-/* Initiate a connection */
-struct session_reliable_udp *initiate_server_connection(char* addr, char* port_number) {
-  struct addrinfo hints, *res;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_DGRAM;
-  if (addr == NULL) {
-    hints.ai_flags = AI_PASSIVE;
-  }
-  
-  if (getaddrinfo(addr, port_number, &hints, &res) != 0) {
-    printf("Error getting address");
-    exit(EXIT_FAILURE);
-  } 
-  
-  int sockfd = create_reliable_udp_socket(res->ai_family, res->ai_protocol);
-  if (sockfd < 0) {
-    printf("Error trying to create socket");
-    exit(EXIT_FAILURE);
-  }
-
-  if (bind(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-    printf("Error trying to bind socket");
-    exit(EXIT_FAILURE); 
-  }
-
-  struct session_reliable_udp *session = (struct session_reliable_udp *) malloc(sizeof(struct session_reliable_udp));
-  session->sockfd = sockfd;
-  session->notInitiated = true;
-  session->closed = false;
-  return session;
-}
-
-bool Receive(struct session_reliable_udp *session, char *buffer, int length) {
+ 
+bool Receive(struct session_reliable_udp *session, char *buffer, int length, char **message_ptr, int *message_length) {
   struct sockaddr_storage client_addr;
   socklen_t addr_size = sizeof(client_addr);
-//  char* ip = new char[MAX_INET]; 
   
   int recv_bytes = recvfrom(session->sockfd, buffer, length, 0, (struct sockaddr *) &client_addr, &addr_size);
 
-//  int actual_data_size = recv_bytes - RELIABLE_UDP_HEADER_SIZE;
-//  extract_info(r_udp, msg);
-//  int size_file_left = r_udp->getFileSize();
-//  char* buffer = new char[size_file_left];
-//  memcpy((buffer + loc), msg + RELIABLE_UDP_HEADER_SIZE, actual_data_size); 
-//  int loc = actual_data_size;
-//  size_file -= actual_data_size;
-//  while (size_file_left != 0) {
-//    int recv_bytes = recvfrom(r_udp->sockfd, msg, len, 0, (struct sockaddr *) &client_addr, &addr_size);
-  if (recv_bytes > 0) {
-      update(session, buffer, recv_bytes, (struct sockaddr *) &client_addr, addr_size);
+  char *message;
+  if (recv_bytes >= 0) {
+//    if (validatePacket(session->client_addr, (struct sockaddr *) &client_addr, addr_size)) {
+      update(session, buffer, recv_bytes, &message, message_length);
+      *message_ptr = message; 
       return true;
+//    } else {
+//      printf("A packet received from a different source. Dropping packet.\n");
+//    }
   } 
   return false;
 }
@@ -94,7 +35,7 @@ void Send(struct session_reliable_udp *session, char *message, size_t length) {
   size_t packet_size = HEADER_SIZE + length;
   char *payload = (char *) malloc(packet_size);
   
-  struct reliable_udp_header *header = generateUDPheaderToWrite(session, length);
+  struct reliable_udp_header *header = generateUDPheaderToWrite(session);
   memcpy(payload, header, HEADER_SIZE);
   memcpy(payload + HEADER_SIZE, message, length);
 
@@ -102,19 +43,20 @@ void Send(struct session_reliable_udp *session, char *message, size_t length) {
   if (bytes_send < 0) {
     printf("error sending packet\n");
   }
+  session->seq_num = session->seq_num + length;
 }
 
-void requestFile(struct session_reliable_udp *session, char *fileName) {
+void SendACK(struct session_reliable_udp *session) {
+  size_t packet_size = HEADER_SIZE;
+  char *payload = (char *) malloc(packet_size);
+  
+  struct reliable_udp_header *header = generateUDPheaderToWrite(session);
+  memcpy(payload, header, HEADER_SIZE);
 
-  initClientSession(session);
-  char *command = "GET ";
-  size_t message_size = strlen(fileName) + strlen(command);
-  char *message = (char *) malloc(message_size + 1);
-  memcpy(message, command, strlen(command));
-  memcpy(message, command, strlen(fileName));
-  message[message_size - 1] = '\0';
-
-  Send(session, message, message_size);
+  int bytes_send = sendto(session->sockfd, payload, packet_size, 0, session->client_addr, session->client_addr_size);
+  if (bytes_send < 0) {
+    printf("error sending packet\n");
+  }
 }
 
 char* get_ip_str(struct sockaddr *sa, char *s, size_t maxlen) {

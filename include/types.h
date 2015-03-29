@@ -24,7 +24,7 @@ struct reliable_udp_header {
 
 
 struct session_reliable_udp {
-  uint32_t ack_num, expected_ack_num, recv_ack_num, seq_num;
+  uint32_t next_ack_num, expected_seq_num, recv_ack_num, seq_num;
   int sockfd;
   struct sockaddr *client_addr;
   socklen_t client_addr_size; 

@@ -18,12 +18,14 @@
 
 #define MAX_INET INET6_ADDRSTRLEN
 #define MAX_BUFFER_SIZE 1024
+#define STATUS_LENGTH 2
+#define STATUS_OK 0
+#define FILE_NOT_FOUND 1
+#define STATUS_OTHER 2
 
-struct session_reliable_udp *initiate_server_connection(char *, char *);
-struct session_reliable_udp *initiate_client_connection(char *, char *);
-bool Receive(struct session_reliable_udp *, char *, int);
+int create_reliable_udp_socket(int, int);
+bool Receive(struct session_reliable_udp *, char *, int, char **, int *);
 void Send(struct session_reliable_udp *, char *, size_t );
-void requestFile(struct session_reliable_udp *, char *);
 char* get_ip_str(struct sockaddr *, char *, size_t);
 bool toClose(struct session_reliable_udp *);
 void session_close(struct session_reliable_udp *);

@@ -1,5 +1,5 @@
 INC = ../include
-CFLAGS = -I$(INC)
+CFLAGS = -I$(INC) -I.
 
-server: server.cpp $(INC)/connection.cpp $(INC)/reliableUDP.cpp $(INC)/connection.h $(INC)/reliableUDP.h $(INC)/types.h
-	g++ -o server server.cpp $(INC)/connection.cpp $(INC)/reliableUDP.cpp $(CFLAGS)
+server: server.cpp serverConnection.cpp serverConnection.h $(INC)/connection.cpp $(INC)/reliableUDP.cpp $(INC)/connection.h $(INC)/reliableUDP.h $(INC)/types.h
+	g++ -o server server.cpp serverConnection.cpp $(INC)/connection.cpp $(INC)/reliableUDP.cpp $(CFLAGS)

@@ -7,5 +7,7 @@
 
 
 void initClientSession(struct session_reliable_udp *);
-void update(struct session_reliable_udp *, char *, int, struct sockaddr *, socklen_t);
-struct reliable_udp_header* generateUDPheaderToWrite(struct session_reliable_udp *, size_t);
+void startSession(struct session_reliable_udp *, char *, struct sockaddr *, socklen_t);
+void update(struct session_reliable_udp *, char *, int, char **, int *);
+struct reliable_udp_header* generateUDPheaderToWrite(struct session_reliable_udp *);
+struct reliable_udp_header *constructHeader(char *);
