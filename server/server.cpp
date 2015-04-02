@@ -36,19 +36,27 @@ int main() {
       if (ifs.good()) {
         cout << "File opened\n";
         char *write_buffer = (char *) malloc(WRITE_BUFFER_LENGTH);
-        ifs.read(write_buffer + 2, WRITE_BUFFER_LENGTH);
+        ifs.read(write_buffer + 3, WRITE_BUFFER_LENGTH);
+        cout << write_buffer;
         strcpy(write_buffer, "OK");
-        printf("--- %s\n", write_buffer);
-        
-        Send(session, write_buffer, ifs.gcount() + 2);
-
+        if (ifs.eof()) {
+          setFIN(session);
+        }
+        printf("where is it?");
+        Send(session, write_buffer, false, ifs.gcount() + 2);
         read_buffer = (char *) malloc(MAX_BUFFER_SIZE);
         while (!ifs.eof()) {
-          if (Receive(session, read_buffer, MAX_BUFFER_SIZE, &message, &message_length)) {
-            cout << "Message: " << read_buffer << '\n';
-            ifs.read(write_buffer, WRITE_BUFFER_LENGTH);
-            Send(session, write_buffer, strlen(write_buffer));
+          struct reliable_udp_header *header = Receive(session, read_buffer, MAX_BUFFER_SIZE, &message, &message_length);
+          if (header != NULL) {
+            updateSession(session, header);
           }
+
+          write_buffer = (char *) malloc(WRITE_BUFFER_LENGTH);
+          ifs.read(write_buffer, WRITE_BUFFER_LENGTH);
+          if (ifs.eof()) {
+            setFIN(session);
+          }
+          Send(session, write_buffer, false, ifs.gcount());
         }
       }
     }

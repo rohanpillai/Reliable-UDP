@@ -4,6 +4,6 @@
 #include <connection.h>
 
 struct session_reliable_udp *initiate_client_connection(char *, char *);
-void requestFile(struct session_reliable_udp *, char *);
+void requestFile(struct session_reliable_udp *, char *, int);
 bool firstResponse(struct session_reliable_udp *, char *, int, char **, int *, int *);
 #endif

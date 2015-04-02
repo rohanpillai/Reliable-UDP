@@ -29,11 +29,22 @@ struct session_reliable_udp *initiate_client_connection(char *server_addr, char 
   return session;
 }
 
-void requestFile(struct session_reliable_udp *session, char *fileName) {
+void initClientSession(struct session_reliable_udp *session, int window_size) {
+  session->notInitiated = true;
+  session->closed = false;
+  session->seq_num = 400; //generateISN();
+  session->next_ack_num = 0;
+  session->tosend_flags.SYN = true;
+  session->tosend_flags.ACK = false;
+  session->tosend_flags.FIN = false;
+  session->window_size = window_size;
+  session->sent_queue = new std::list<packet_info*>();
+}
 
-  initClientSession(session);
+void requestFile(struct session_reliable_udp *session, char *fileName, int window_size) {
+  initClientSession(session, window_size);
   size_t message_size = strlen(fileName); //+ strlen(command);
-  Send(session, fileName, message_size);
+  Send(session, fileName, false, message_size);
 }
 
 bool firstResponse(struct session_reliable_udp *session, char *buffer, int buffer_size, char **message_ptr, int *message_length, int *err) {
@@ -53,17 +64,22 @@ bool firstResponse(struct session_reliable_udp *session, char *buffer, int buffe
       return false;
     }
     int msg_size = recv_bytes - HEADER_SIZE;
-    printf("Sequence number: %d\n Message size: %d\n", header->seq_num, msg_size);
+//    printf("Sequence number: %d\n Message size: %d\n", header->seq_num, msg_size);
+    session->last_ack_num = header->seq_num;
     session->expected_seq_num = header->seq_num + ((uint32_t) msg_size);
     session->next_ack_num = session->expected_seq_num;
     session->tosend_flags.SYN = false;
     session->tosend_flags.ACK = true;
     session->tosend_flags.FIN = false;
 
-    *message_ptr = buffer + HEADER_SIZE;
-    *message_length = recv_bytes - HEADER_SIZE;
+    char *message = buffer + HEADER_SIZE;
+    int msg_length = recv_bytes - HEADER_SIZE;
     char *status = (char *) malloc(STATUS_LENGTH + 1);
-    memcpy(status, *message_ptr, STATUS_LENGTH);
+    memcpy(status, message, STATUS_LENGTH);
+
+    *message_ptr = message + STATUS_LENGTH + 1;
+    *message_length = msg_length - STATUS_LENGTH - 1;
+
     status[STATUS_LENGTH] = '\0';
     
     if (!(strcmp(status, "OK"))) {
