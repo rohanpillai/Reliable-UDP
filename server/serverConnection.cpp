@@ -1,7 +1,7 @@
 #include <serverConnection.h>
 
 /* Initiate a connection */
-struct session_reliable_udp *initiate_server_connection(char* addr, char* port_number) {
+struct session_reliable_udp *initiate_server_connection(char* addr, char* port_number, int window_size) {
   struct addrinfo hints, *res;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
@@ -30,6 +30,7 @@ struct session_reliable_udp *initiate_server_connection(char* addr, char* port_n
   session->sockfd = sockfd;
   session->notInitiated = true;
   session->closed = false;
+  session->window_size = window_size;
   return session;
 }
 
@@ -41,11 +42,10 @@ void startSession(struct session_reliable_udp *session, char* msg, struct sockad
     printf("Packet with SYN off encountered without connection. Ignoring packet.\n");
     return;
   }
-  printf("rec: %s\n", msg);
   //session->recv_ack_num = header->seq_num;
   session->expected_seq_num = header->seq_num + strlen(msg + HEADER_SIZE);
 
-  printf("First packet. Seq: %d\t Expected seq num: %d\n", header->seq_num, session->expected_seq_num);
+  printf("First packet. Seq: %d\t Expected seq num: %d\n", header->seq_num, session->next_ack_num);
 
   session->tosend_flags.SYN = true;
   session->tosend_flags.ACK = true;

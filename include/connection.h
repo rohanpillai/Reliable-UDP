@@ -33,7 +33,7 @@
 int create_reliable_udp_socket(int, int);
 struct reliable_udp_header *Receive(struct session_reliable_udp *, char *, int, char **, int *);
 void Send(struct session_reliable_udp *, char *message = NULL, bool isACK = true, size_t length = 0, bool eof = false);
-int updateSession(struct session_reliable_udp *, struct reliable_udp_header *);
+int updateSession(struct session_reliable_udp *, struct reliable_udp_header *, size_t);
 char* get_ip_str(struct sockaddr *, char *, size_t);
 bool toClose(struct session_reliable_udp *);
 void setFIN(struct session_reliable_udp *);

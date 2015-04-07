@@ -30,7 +30,7 @@ struct packet_info {
 };
 
 struct session_reliable_udp {
-  uint32_t next_ack_num, expected_seq_num, seq_num, last_ack_num;
+  uint32_t next_ack_num, expected_seq_num, seq_num, last_ack_for_dupl;
   int sockfd, window_size;
   struct sockaddr *client_addr;
   socklen_t client_addr_size; 

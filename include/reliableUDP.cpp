@@ -3,7 +3,7 @@
 struct reliable_udp_header* makeHeaderFromSession(struct session_reliable_udp* session) {
   struct reliable_udp_header *header = (struct reliable_udp_header *) malloc(sizeof(struct reliable_udp_header));
   header->seq_num = session->seq_num;
-  header->ack_num = session->next_ack_num;
+  header->ack_num = session->expected_seq_num;
   header->window_size = 0;
   header->flags = 0x00;
   if (session->tosend_flags.SYN) {

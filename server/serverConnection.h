@@ -3,7 +3,7 @@
 
 #include <connection.h>
 
-struct session_reliable_udp *initiate_server_connection(char *, char *);
+struct session_reliable_udp *initiate_server_connection(char *, char *, int);
 bool newRequest(struct session_reliable_udp *, char *, int, char **);
 
 #endif

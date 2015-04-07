@@ -9,11 +9,15 @@
 
 using namespace std;
 
-int main() {
+int main(int argc, char *argv[]) {
 
+  if (argc != 2) {
+    printf("Expected format: ./client FILE_NAME");
+    return -1;
+  }
   struct session_reliable_udp *session = initiate_client_connection(SERVER_ADDR, SERVER_PORT);
 
-  char *filename = "hello";
+  char *filename = argv[1];
   requestFile(session, filename, WINDOW_SIZE);
   char *buffer = (char *) malloc(MAX_BUFFER_SIZE);
   char *message;
@@ -32,15 +36,15 @@ int main() {
       ofstream outfile(filename);
       outfile.write(message, message_length);
 
-      Send(session, "", 0);
+      Send(session, "");
       while (!toClose(session)) {
         struct reliable_udp_header *header = Receive(session, buffer, MAX_BUFFER_SIZE, &message, &message_length);
         if (header != NULL) {
-          updateSession(session, header);
+          updateSession(session, header, message_length);
           outfile.write(message, message_length);
 //          cout << "Received " << message << '\n';
           buffer = (char *) malloc(MAX_BUFFER_SIZE);
-          Send(session, "", 0);
+          Send(session, "");
           if (toClose(session)) {
             outfile.close();
             break;

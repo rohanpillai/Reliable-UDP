@@ -65,9 +65,8 @@ bool firstResponse(struct session_reliable_udp *session, char *buffer, int buffe
     }
     int msg_size = recv_bytes - HEADER_SIZE;
 //    printf("Sequence number: %d\n Message size: %d\n", header->seq_num, msg_size);
-    session->last_ack_num = header->seq_num;
+    session->last_ack_for_dupl = header->seq_num;
     session->expected_seq_num = header->seq_num + ((uint32_t) msg_size);
-    session->next_ack_num = session->expected_seq_num;
     session->tosend_flags.SYN = false;
     session->tosend_flags.ACK = true;
     session->tosend_flags.FIN = false;

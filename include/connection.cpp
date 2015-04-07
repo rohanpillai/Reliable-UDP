@@ -38,19 +38,24 @@ void removeFrontPacketInfo(struct session_reliable_udp *session) {
   (session->sent_queue)->pop_front();
 }
 
-int updateSession(struct session_reliable_udp *session, struct reliable_udp_header *header) {
+int updateSession(struct session_reliable_udp *session, struct reliable_udp_header *header, size_t message_length) {
 
-  if (header->seq_num == getExpectedSequenceNumber(session)) {
-    session->last_ack_num = header->seq_num;
+  if (header->ack_num == getExpectedSequenceNumber(session)) {
+    session->last_ack_for_dupl = header->seq_num;
     removeFrontPacketInfo(session);
   } else {
-    if (header->seq_num == session->last_ack_num) {
+    if (header->ack_num == session->last_ack_for_dupl) {
       resendQueue(session);
       return DUPLICATE_ACK;
     } else { 
-      printf("Out of order packets. Expected: %d \t Got %d\n", session->expected_seq_num, header->seq_num);
-      return OUT_OF_ORDER_PACKET;
+      printf("Unexpected Ack: %d\n", header->ack_num);
+      return 5;
     }
+  }
+
+  if (header->seq_num != session->expected_seq_num) {
+    printf("Out of order packets. Expected: %d \t Got %d\n", session->expected_seq_num, header->seq_num);
+    return OUT_OF_ORDER_PACKET;
   }
 
   session->tosend_flags.SYN = false;
@@ -60,6 +65,7 @@ int updateSession(struct session_reliable_udp *session, struct reliable_udp_head
   } else {
     session->tosend_flags.FIN = false;
   }
+  session->expected_seq_num += (uint32_t) message_length;
   return IN_ORDER_PACKET;
 }
 
@@ -80,8 +86,8 @@ struct reliable_udp_header *Receive(struct session_reliable_udp *session, char *
         *message_length = recv_bytes - HEADER_SIZE;
       }
   }
-  printf("Received:\n");
-  printPacket(buffer); 
+//  printf("Received:\n");
+//  printPacket(buffer); 
   return header;
 }
 
@@ -134,10 +140,10 @@ int waitForACK(struct session_reliable_udp *session) {
     if (header != NULL) {
       if (header->seq_num == getExpectedSequenceNumber(session)) {
         removeFrontPacketInfo(session);
-        session->last_ack_num = header->seq_num;
+        session->last_ack_for_dupl = header->seq_num;
         return IN_ORDER_ACK;
       } else {
-        if (header->seq_num == session->last_ack_num) {
+        if (header->seq_num == session->last_ack_for_dupl) {
           return DUPLICATE_ACK;
         } else {
           printf("Expected ACK: %d\t Got: %d\n", getExpectedSequenceNumber(session), header->seq_num);
@@ -165,22 +171,24 @@ void Send(struct session_reliable_udp *session, char *message, bool isACK, size_
       return;
     }
   }
-  printf("ready\n");
   struct reliable_udp_header *header = makeHeaderFromSession(session);
   char *payload;
   size_t packet_length;
   if (!isACK) {
     SendData(header, message, length, session->sockfd, session->client_addr, session->client_addr_size, &payload, &packet_length);
-    session->next_ack_num = session->next_ack_num + ((uint32_t)packet_length);
   } else { 
     SendACK(header, &payload, session->sockfd, session->client_addr, session->client_addr_size);
     packet_length = HEADER_SIZE;
   }
-  printPacket(payload);
+//  char ch;
+//  scanf("\n%c",&ch);
+
+  session->seq_num += length;
   struct packet_info *info = (struct packet_info *) malloc(sizeof(struct packet_info));
-  info->expected_ack = session->next_ack_num;
+  info->expected_ack = session->seq_num;
   info->memptr = payload;
   info->mem_size = packet_length;
+  (session->sent_queue)->push_back(info);
 }
 
 char* get_ip_str(struct sockaddr *sa, char *s, size_t maxlen) {
